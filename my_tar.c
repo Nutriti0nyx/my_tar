@@ -55,44 +55,14 @@ char * base(int n, int l, int base){
     return str;
 }
 
-
-
-/*int main(){
-    DIR * dir = opendir(".");
-    struct dirent * file = NULL;
-    struct stat s;
-    while (file == NULL || strcmp(file->d_name,"Makefile")){
-        file = readdir(dir);
-    }
-    printf("%s",file->d_name); // nom + x*\0 = 100
-    for (int _ = 0; _<99-(int)strlen(file->d_name) ;_++){
-        printf("%c",'\0');
-    }
-
-    stat("Makefile",&s); 
-    printf("00%s ",base(s.st_mode,4,8)); //permissions + espace + \0
-    printf("%s ", base(s.st_uid,6,8)); //uid + espace + \0
-    printf("%s ", base(s.st_gid,6,8)); //gid + espace + \0
-    printf("%s ", base(s.st_size,11,8)); //taille + espace
-    printf("%s ", base(s.st_mtime,11,8)); //date modif + espace
-    printf("          "); //somme de la taille de l'en-tête + \0 + espace
-    printf("%c", typeFlagConvert(s.st_mode)); // flag
-    for (int _ = 0; _<100;_++){
-        printf("%c",'\0');
-    }
-    printf("ustar%c00",'\0');
-    printf("%s",getpwuid(s.st_uid)->pw_name); //nomuid + x*\0 = 32
-    printf("%s",getgrgid(s.st_gid)->gr_name); //nomgid + x*\0 = 32
-    printf("000000 "); // devmajor + espace + \0
-    printf("000000 "); // devmajor + espace + \0
-}*/
-
 void fileWrite(int file, char* str, int strl, int l){
     if (strl>0){
         write(file, str, strl);
     } else {
+        strl = 0;
         for (int i = 0; str[i]!='\0';i++){
             write(file, &str[i], 1);
+            strl++;
         }
     }
     while (strl<l){
@@ -175,37 +145,78 @@ char ** fileFullName(char * fullName){
     return prefix_name;
 }
 
-int main(){
-    int file = open("a.txt", O_WRONLY | O_CREAT, 777);
+void chksum(int file){
+    int sum = 0;
+    int i = 0;
+    char header[512];
+    lseek(file, 0, 0);
+    read(file, header, 512);
+    while (i<512){
+        sum += header[i];
+        i++;
+    }
+    lseek(file, 148, 0);
+    fileWrite(file, base(sum,6,8),6,7);
+    fileWrite(file, " ",1,1);
+}
+
+void header(int file, char * name, int block){
     struct stat st;
-    char ** a = fileFullName("ABCDEFGHIJKL ABCDEFGHIJKL ABCDEFGHIJKL ABCDEFGHIJKL ABCDEFGHIJKL A/BCDEFGHIJKL ABCDEFGHIJKL ABCDEFG"); // ça déconne pour name
-    printf("%s,%s",a[0],a[1]);
-    stat("Makefile",&st);
-    fileWrite(file, "Makefile",-1,100); // name + nulls = 100 | pos : 0
+    lseek(file, 0+512*block, 0);
+    char ** prefix_name = fileFullName(name);
+    stat(name,&st);
+    fileWrite(file, prefix_name[1],-1,100);                                     // name + nulls = 100 | pos : 0
     fileWrite(file, concat(3, 7, "00", base(st.st_mode, 4, 8), " "), 7, 8);     // perms + null = 8 | pos : 100
     fileWrite(file, concat(2, 7, base(st.st_uid, 6, 8), " "), 7, 8);            // uid + space + null = 8 | pos : 108
     fileWrite(file, concat(2, 7, base(st.st_gid, 6, 8), " "), 7, 8);            // gid + space + null = 8 | pos : 116
     fileWrite(file, concat(2, 12, base(st.st_size, 11, 8), " "), 12, 12);       // size + space = 12 | pos : 124
     fileWrite(file, concat(2, 12, base(st.st_mtime, 11, 8), " "), 12, 12);      // mod-time + space = 12 | pos : 136
-    fileWrite(file, "          ", 10, 11);      fileWrite(file, " ", 1, 1);     // 10 spaces + null + space = 12 | pos : 148
-    fileWrite(file, typeFlagConvert(st.st_mode),1,1);                           // flag = 1 | pos : 156
-    fileWriteLink(file, "Makefile");                                            // link + nulls = 100 | pos : 157
+    fileWrite(file, "        ", 8, 8);;                                           // 8 spaces = 8 | pos : 148
+    fileWrite(file, typeFlagConvert(st.st_mode),1,1);                           // flag = 1 | pos : 156 
+    fileWriteLink(file, name);                                                  // link + nulls = 100 | pos : 157
     fileWrite(file, "ustar\0", 6, 6);                                           // ustar + null = 6 | pos : 257
     fileWrite(file, "00", 2, 2);                                                // 00 | pos : 263
-    fileWrite(file, getpwuid(st.st_uid)->pw_name,-1,32);                        // user + nulls = 100 | pos : 265
-    fileWrite(file, getgrgid(st.st_gid)->gr_name,-1,32);                        // guest + nulls = 100 | pos : 297
+    fileWrite(file, getpwuid(st.st_uid)->pw_name,-1,32);                        // user + nulls = 32 | pos : 265
+    fileWrite(file, getgrgid(st.st_gid)->gr_name,-1,32);                        // guest + nulls = 32 | pos : 297 
     fileWrite(file, concat(2, 7, base(minor(st.st_rdev),6,8)," "),7,8);         // minor + space + null = 8 | pos : 329
     fileWrite(file, concat(2, 7, base(major(st.st_rdev),6,8)," "),7,8);         // major + space + null = 8 | pos : 337
-    close(file);
+    fileWrite(file, prefix_name[0],-1,155);                                     // prefix + nulls = 155 | pos : 345
+    fileWrite(file, "\0\0\0\0\0\0\0\0\0\0\0\0", 12, 12);                        // nulls = 12 | pos = 500
+    chksum(file);                                                               // chksum + null + space = 8 | pos = 148
+}
+
+int fileWriteContent(int fileArc, char * name, int block){
+    int fileSrc = open(name, O_RDONLY);
+    int count = 0;
+    lseek(fileArc, 0+512*block, 0);
+    char c;
+    while (read(fileSrc, &c, 1) > 0){
+        write(fileArc, &c, 1);
+        count++;
+    }
+    while (count++%512 != 0){
+        write(fileArc, "\0",1);
+    }
+    return count/512;
+}
+
+int create(char * arc, char ** names, int l){
+    int file = open(arc, O_RDWR | O_CREAT, 777);
+    int block = 0;
+    for (int i = 0; i<l;i++){
+        header(file,names[i],block++);
+        block += fileWriteContent(file, names[i], block);
+    }
     return 0;
 }
 
-
-/*
 int main(int ac, char** av){
     bool f_flag = FALSE;
     int * flags = calloc(5,sizeof(bool));
-    for (int i = 0; i<ac;i++){
+    char ** fileNames = malloc(sizeof(char *)*ac);
+    int fileCount = 0;
+    int archiveIndex;
+    for (int i = 1; i<ac;i++){
         if (av[i][0]=='-'){
             for (int j = 1;av[i][j];j++){
                 if (av[i][j]=='f'){
@@ -223,10 +234,12 @@ int main(int ac, char** av){
                 }
             }
         } else if (f_flag){
-            char * archive = av[i];
+            archiveIndex = i;
+            f_flag = FALSE;
         } else {
-            char * fileN;
-        }
+            fileNames[fileCount++] = av[i];
+        } 
     } 
+    create(av[archiveIndex], fileNames, fileCount);
+    return 0;
 }
-    */
