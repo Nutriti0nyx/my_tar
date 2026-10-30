@@ -1,10 +1,16 @@
+//?------------------[HEADERS]------------------
+
 #include <sys/stat.h>
 #include <unistd.h>
 #include <stdlib.h>
 
+//?------------------[TOOLS]------------------
+
 char * typeFlagConvert(int type);
 
 char * base(int n, int l, int base);
+
+//?------------------[WRITE]------------------
 
 void fileWrite(int file, char* str, int strl, int l){
     if (strl>0){

@@ -1,45 +1,23 @@
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <pwd.h>
-#include <grp.h>
-#include <fcntl.h>
+//?------------------[HEADERS]------------------
+
 #include <stdlib.h>
-#include <unistd.h>
-#include <stdarg.h>
-#include <stdio.h>
+
+//?------------------[TYPES]------------------
 
 typedef enum{
     FALSE,
     TRUE
 } bool;
 
-char * typeFlagConvert(int type);
-
-char * base(int n, int l, int base);
-
-void fileWrite(int file, char* str, int strl, int l);
-
-void fileWriteLink(int file, char * name);
-
-char * concat(int n, int l, ...);
-
-void swap(char * str1, char * str2, int l);
-
-char ** fileFullName(char * fullName);
-
-void chksum(int file, int block);
-
-void fHeader(int file, char * name, int block);
-
-int fContent(int fileArc, char * name, int block);
+//?------------------[BLOCKS]------------------
 
 void voidBlock(char * name);
-
-int blockcount(int file);
 
 void createTar(char * arc, char ** names, int l);
 
 void appendTar(char * arc, char ** names, int l);
+
+//?------------------[MAIN]------------------
 
 int main(int ac, char** av){
     bool f_flag = FALSE;

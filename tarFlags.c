@@ -1,11 +1,17 @@
+//?------------------[HEADERS]------------------
+
 #include <unistd.h>
 #include <fcntl.h>
+
+//?------------------[BLOCKS]------------------
 
 void fHeader(int file, char * name, int block);
 
 int fContent(int fileArc, char * name, int block);
 
 int blockcount(int file);
+
+//?------------------[FLAGS]------------------
 
 void createTar(char * arc, char ** names, int l){
     int file = open(arc, O_RDWR | O_CREAT, 0777);

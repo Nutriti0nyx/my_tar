@@ -1,3 +1,4 @@
+//?------------------[HEADERS]------------------
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
@@ -5,7 +6,7 @@
 #include <pwd.h>
 #include <grp.h>
 
-//----------------------------------
+//?------------------[TOOLS]------------------
 
 char * typeFlagConvert(int type);
 
@@ -15,7 +16,7 @@ char * concat(int n, int l, ...);
 
 char ** fileFullName(char * fullName);
 
-//----------------------------------
+//?------------------[WRITER]------------------
 
 void fileWrite(int file, char* str, int strl, int l);
 
@@ -23,7 +24,7 @@ void fileWriteLink(int file, char * name);
 
 void chksum(int file, int block);
 
-//----------------------------------
+//?------------------[BLOCKS]------------------
 
 void fHeader(int file, char * name, int block){
     struct stat st;
@@ -69,13 +70,10 @@ int fContent(int fileArc, char * name, int block){
     return (count-1)/512;
 }
 
-
 void voidBlock(char * name){
     int i = 0;
     int file = open(name, O_WRONLY | O_APPEND);
-    while (i++<1024){
-        write(file,"\0",1);
-    }
+    fileWrite(file,"",0,1024);
     close(file);
 }
 

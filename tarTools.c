@@ -1,5 +1,9 @@
+//?------------------[HEADERS]------------------
+
 #include <stdarg.h>
 #include <stdlib.h>
+
+//?------------------[TOOLS]------------------
 
 char * typeFlagConvert(int type){
     if (type/4096 == 8){
