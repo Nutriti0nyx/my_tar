@@ -1,3 +1,7 @@
 *
 !.gitignore
 !my_tar.c
+!tarBlocks.c
+!tarFlags.c
+!tarTools.c
+!tarWriter.c
